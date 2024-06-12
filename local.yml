@@ -1,0 +1,63 @@
+# Tasks to complete before running roles
+---
+
+- hosts: all
+  tages: always,updater
+  become: true
+  pre_tasks:
+    - name: Update pacman cache (Arch)
+      pacman: update_cache=yes
+      changed_when: false
+      when: ansible_distribution == "Archlinux"
+
+    - name: Update apt cache (Debian, Ubuntu)
+      apt: update_cache=yes
+      changed_when: false
+      when: ansible_distribution in ["Debian", "Ubuntu"]
+
+
+# ROLES
+- hosts: all
+  become: true
+  roles:
+    - base
+
+- hosts: workstation
+  become: true
+  roles:
+    - workstation
+
+- hosts: server
+  become: true
+  roles:
+    - server
+
+# endo f run cleanup / reporting
+- hosts: all
+  become: true
+  tasks:
+  - name: Cleanup package cache (Debian, Ubuntu)
+    apt:
+      autoclean: yes
+    changed_when: false
+    when: ansible_distribution in ["Ubuntu", "Debian"]
+  
+  - name: Autoremove orphaned packages
+    apt:
+      autoremove: yes
+      purge: yes
+    when: ansible_distribution in ["Ubuntu", "Debian"]
+  
+  - name: Send completion alert
+    include_tasks: playbooks/send_completion_alert.yml
+    when:
+      - task_failed is not defined
+
+  - name: Send failure alert
+    inlcude_tasks: playbooks/send_failure_alert.yml
+    when:
+      - task_failed is defined
+      - task_failed == true
+
+
+
