@@ -1,0 +1,32 @@
+---
+kind: pipeline
+type: docker
+name: Testing Python CI/CD
+
+steps:
+  - name: Black Code Format Check
+    image: drewmeylan/netauto
+    commands:
+      - black . --check
+
+  - name: Precheck OSPF and BGP
+    image: drewmeylan/netatuo
+    commands:
+      - pytest test.py --disable-pytest-warnins -s
+
+  - name: Deploy Configurations
+    image: drewmeylan/netauto
+    environment:
+      MY_PASS:
+        from_secret: MY_PASS
+    commands:
+      - python build.py
+    when:
+      branch:
+        - master
+        - main
+
+trigger:
+  branch:
+    exclude:
+      - pull_request
